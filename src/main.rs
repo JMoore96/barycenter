@@ -1,3 +1,10 @@
+extern crate rayon;
+extern crate itertools;
+
+use rayon::prelude::*;
+use itertools::Itertools;
+
+
 mod bodies;
 use bodies::get_values;
 
@@ -26,15 +33,32 @@ fn merge_two_bodies(a: Body, b: Body) -> Body {
     }
 }
 
-fn merge_all_bodies_iter(bodies: &[Body]) -> Body {
-    let barycenter = bodies[0];
-    bodies.iter().skip(1).fold(barycenter, |barycenter, body| {
-        merge_two_bodies(barycenter, *body)
-    })
+// fn merge_all_bodies_iter(bodies: &[Body]) -> Body {
+//     let barycenter = bodies[0];
+//     bodies.iter().skip(1).fold(barycenter, |barycenter, body| {
+//         merge_two_bodies(barycenter, *body)
+//     })
+// }
+
+fn merge_all_bodies_recursive(bodies: &[Body]) -> Body {
+    println!("Bodies: {}", bodies.len());
+
+    if bodies.len() == 1 {
+        return bodies[0];
+    }
+
+    let tuples: Vec<_> = bodies.iter().tuples().collect();
+    let mut merged_bodies: Vec<_> = tuples.into_par_iter().map(|(a, b)| merge_two_bodies(*a, *b)).collect();
+
+    if bodies.len() % 2 != 0 {
+        merged_bodies.push(bodies[bodies.len() - 1]);
+    }
+
+    return merge_all_bodies_recursive(&merged_bodies);
 }
 
 fn main() {
    let bodies = get_values();
-   let barycenter = merge_all_bodies_iter(&bodies);
+   let barycenter = merge_all_bodies_recursive(&bodies);
    println!("Barycenter: ({}, {}, {})\nMass: {}", barycenter.x, barycenter.y, barycenter.z, barycenter.mass);
 }
